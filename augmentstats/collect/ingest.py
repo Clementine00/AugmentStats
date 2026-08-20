@@ -1,12 +1,17 @@
 """Parse exported game.json files and load them into the AugmentStats database."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from augmentstats.db import DEFAULT_DB_PATH, get_connection, patch_from_version
+from augmentstats.db import (
+    DEFAULT_DB_PATH,
+    PROJECT_ROOT,
+    get_connection,
+    patch_from_version,
+)
 
-DEFAULT_RAW_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
+DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "raw"
 
 # BOM byte sequences used to detect text encoding of exported files.
 # `curl.exe ... > file` on PowerShell writes UTF-16LE with a BOM; other
@@ -101,7 +106,10 @@ def ingest_game(conn, data: dict, imported_at: str) -> None:
                 total_damage_dealt_to_champions, total_damage_taken, total_heal,
                 vision_score, wards_placed, wards_killed, cs, lane, role,
                 item0, item1, item2, item3, item4, item5, item6, stats_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
             """,
             (
                 game_id,
@@ -189,7 +197,7 @@ def ingest_folder(
             try:
                 if already_present:
                     delete_game(conn, game_id)
-                ingest_game(conn, data, datetime.now(timezone.utc).isoformat())
+                ingest_game(conn, data, datetime.now(UTC).isoformat())
                 conn.commit()
                 summary["imported"].append((path.name, game_id))
             except Exception as exc:  # noqa: BLE001 - report and continue

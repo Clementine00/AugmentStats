@@ -6,7 +6,7 @@ under the "cherry" (Arena's internal codename) game-data path.
 
 import json
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from augmentstats.db import DEFAULT_DB_PATH, get_connection
@@ -26,7 +26,7 @@ def fetch_augments(url: str = AUGMENTS_URL) -> list[dict]:
 
 def refresh_augments(db_path: Path = DEFAULT_DB_PATH, url: str = AUGMENTS_URL) -> int:
     entries = fetch_augments(url)
-    refreshed_at = datetime.now(timezone.utc).isoformat()
+    refreshed_at = datetime.now(UTC).isoformat()
 
     conn = get_connection(db_path)
     try:

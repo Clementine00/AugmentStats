@@ -3,10 +3,10 @@
 import argparse
 from pathlib import Path
 
-from augmentstats.augments import refresh_augments
-from augmentstats.champions import refresh_champions
+from augmentstats.collect.augments import refresh_augments
+from augmentstats.collect.champions import refresh_champions
+from augmentstats.collect.ingest import DEFAULT_RAW_DIR, ingest_folder
 from augmentstats.db import DEFAULT_DB_PATH, init_db
-from augmentstats.ingest import DEFAULT_RAW_DIR, ingest_folder
 
 
 def cmd_init_db(args: argparse.Namespace) -> None:
@@ -67,7 +67,9 @@ def main() -> None:
     ingest_parser.add_argument(
         "--force",
         action="store_true",
-        help="Re-ingest games already in the database (deletes and reloads them) instead of skipping",
+        help=(
+            "Re-ingest games already in the database (deletes and reloads them) instead of skipping"
+        ),
     )
     ingest_parser.set_defaults(func=cmd_ingest)
 

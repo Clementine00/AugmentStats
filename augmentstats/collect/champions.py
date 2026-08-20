@@ -2,7 +2,7 @@
 
 import json
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from augmentstats.db import DEFAULT_DB_PATH, get_connection
@@ -28,7 +28,7 @@ def fetch_champions(version: str | None = None) -> list[dict]:
 
 def refresh_champions(db_path: Path = DEFAULT_DB_PATH) -> int:
     entries = fetch_champions()
-    refreshed_at = datetime.now(timezone.utc).isoformat()
+    refreshed_at = datetime.now(UTC).isoformat()
 
     rows = [
         {

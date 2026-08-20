@@ -3,7 +3,12 @@
 import sqlite3
 from pathlib import Path
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "augmentstats.db"
+# Single anchor for every on-disk path in the project. Modules deeper in the
+# package (collect/, stats/, web/) import this instead of walking up from their
+# own __file__, so moving a module can never silently repoint a default path.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+DEFAULT_DB_PATH = PROJECT_ROOT / "augmentstats.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS games (
