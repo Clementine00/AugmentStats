@@ -1,0 +1,35 @@
+[project]
+name = "augmentstats"
+version = "0.1.0"
+description = "Collect and analyse League of Legends ARAM Mayhem augment statistics."
+requires-python = ">=3.14"
+
+# Deliberately empty, and intended to stay that way: running the CLI must never
+# require installing anything. Dev tooling lives in the dependency-group below.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff==0.16.3",
+    "pytest==9.1.1",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "BLE", # blind except  (the codebase already carries BLE001 noqa comments)
+]
+
+[tool.pytest.ini_options]
+# The package is run in-place (`python -m augmentstats`) and never pip-installed,
+# so the repo root has to be on sys.path for tests to import it.
+pythonpath = ["."]
+testpaths = ["tests"]

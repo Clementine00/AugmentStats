@@ -31,27 +31,32 @@ CommunityDragon / Data Dragon ──(refresh)───────────�
 
 ## Requirements
 
-- **Python 3.10+** (the dev container ships 3.13). No third-party Python packages —
-  everything uses the standard library.
+- **Python 3.14** (matches the dev container and CI). No third-party **runtime**
+  dependencies — the CLI uses only the standard library, and that is deliberate.
+  Development tooling (ruff, pytest) is declared in `pyproject.toml`.
 - **Windows + PowerShell** to run the exporter (it talks to the local League client).
   The rest of the tooling is cross-platform.
 - **`curl.exe`** on `PATH` (bundled with Windows 10/11) for the exporter.
 - The **League client must be running** and sitting on the home screen when you export.
 
-A dev container is provided under `.devcontainer/` (Python 3.13 + Node + Claude Code).
+A dev container is provided under `.devcontainer/` (Python 3.14 + Node + Claude Code).
 
 ## Directory layout
 
 ```
 augmentstats/            Python package (the CLI lives here)
   cli.py                 argparse entry point: init-db, refresh-*, ingest
-  db.py                  SQLite schema, connection helper, migrations
-  ingest.py              parse game.json files -> database rows
-  augments.py            refresh augment id -> name/rarity from CommunityDragon
-  champions.py           refresh champion id -> name from Data Dragon
+  db.py                  SQLite schema, connection, migrations, PROJECT_ROOT
+  collect/               everything that WRITES to the database
+    ingest.py            parse game.json files -> database rows
+    augments.py          refresh augment id -> name/rarity from CommunityDragon
+    champions.py         refresh champion id -> name from Data Dragon
 data/raw/                downloaded <gameId>.json files (git-ignored)
 queries/                 analysis SQL
+tests/                   pytest suite (synthetic fixtures only)
 scripts/export-games.ps1 exporter that pulls games from the League client
+pyproject.toml           dev dependencies + ruff/pytest config
+.github/workflows/ci.yml lint and tests on every push and PR
 augmentstats.db          SQLite database (git-ignored)
 ```
 
@@ -121,6 +126,35 @@ python -m augmentstats ingest path\to\folder --force
 Ingest reports how many games were imported, skipped (already present), or failed.
 It handles both UTF-8 and UTF-16 (BOM-prefixed) JSON, since different export
 methods encode differently.
+
+## Development
+
+Runtime needs nothing installed. The dev tooling does:
+
+```
+python -m venv .venv
+.venv\Scripts\python -m pip install --group dev
+```
+
+Then the same three commands CI runs:
+
+```
+ruff check .
+ruff format --check .
+pytest
+```
+
+Tests use **synthetic** game payloads built in `tests/factories.py` — no real
+exported games are committed, since they contain other players' riot IDs and
+PUUIDs. `augmentstats.db` and `data/raw/` are git-ignored and stay local.
+
+CI (`.github/workflows/ci.yml`) runs those same three commands on every push to
+`main` and every pull request. There is no deploy stage: nothing here is meant to
+be published.
+
+Note that a fresh clone has no `data/raw/` directory (git does not store empty
+directories), so `ingest` reports `0 imported, 0 skipped, 0 failed` until you
+export some games.
 
 ## Database schema
 
@@ -296,7 +330,7 @@ sqlite3 augmentstats.db < queries/augment_winrates.sql
 - `refresh-augments` pulls from CommunityDragon's `/latest/` path, which can be
   **ahead of your live client** (it may include augments from a not-yet-live
   patch). Extra reference entries are harmless — they only appear in results if an
-  actual game contains them. Pin the URL in `augmentstats/augments.py` to a specific
+  actual game contains them. Pin the URL in `augmentstats/collect/augments.py` to a specific
   version if you need the reference table to match live exactly.
 - `data/raw/*.json` and `augmentstats.db` are git-ignored; the database is rebuildable
   from the raw files via `ingest`.

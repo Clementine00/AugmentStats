@@ -1,0 +1,35 @@
+name: CI
+
+# There is no deploy stage on purpose: the database and exported games never
+# leave the machine that produced them, so there is nothing to publish.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Versions come from the [dependency-groups] table in pyproject.toml so the
+      # pins have a single home. --group needs pip >= 25.1.
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format
+        run: ruff format --check .
+
+      - name: Tests
+        run: pytest
