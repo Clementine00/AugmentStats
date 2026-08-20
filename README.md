@@ -366,9 +366,16 @@ Needs Python 3.14 (matching local and CI) and SSH key auth from the Windows box.
 powershell -File scripts\sync-to-server.ps1
 ```
 
-Asks the server which games it already has, copies only the missing ones, runs
-ingest remotely and prints the result. `scp` is used rather than `rsync` because
-rsync would have to exist on both ends and Windows has none.
+Runs `git pull` on the server, asks which games it already has, copies only the
+missing ones, runs ingest remotely and prints the result. `scp` is used rather
+than `rsync` because rsync would have to exist on both ends and Windows has none.
+
+The pull matters because **nothing else deploys code to the server** -- merging a
+pull request does not touch it, so without this it would keep running whatever
+commit was last pulled. The data directories are git-ignored, so a pull can never
+disturb the database or the exported games. A failed pull warns loudly and
+continues with the code already there, rather than blocking games from being
+collected; pass `-SkipPull` to skip it entirely.
 
 The SSH target is resolved in this order: `-Server user@host`, then the
 `AUGMENTSTATS_SERVER` environment variable, then a `server.local` file in the repo

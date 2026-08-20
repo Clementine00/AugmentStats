@@ -19,6 +19,10 @@
 .PARAMETER RemotePath
     Where the checkout lives on the server. Defaults to /srv/augmentstats.
 
+.PARAMETER SkipPull
+    Skip updating the server's checkout. By default the server runs `git pull`
+    first, so it never ingests with code older than main.
+
 .PARAMETER LocalRaw
     Folder of exported games to ship. Defaults to data/raw next to this script.
 
@@ -30,7 +34,8 @@
 param(
     [string]$Server,
     [string]$RemotePath = "/srv/augmentstats",
-    [string]$LocalRaw
+    [string]$LocalRaw,
+    [switch]$SkipPull
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,6 +73,27 @@ if ($localFiles.Count -eq 0) {
 Write-Host "Server:  $Server"
 Write-Host "Remote:  $RemotePath"
 Write-Host "Local:   $($localFiles.Count) exported game(s)"
+
+# Bring the server's checkout up to date before it ingests anything. Nothing else
+# deploys code to the server -- merging a PR does not touch it -- so without this
+# it silently runs whatever commit was last pulled. The data directories are
+# git-ignored, so a pull cannot disturb the database or the exported games.
+if (-not $SkipPull) {
+    Write-Host ""
+    Write-Host "Updating server checkout..."
+    $pullOutput = & ssh -o BatchMode=yes $Server "cd $RemotePath && git pull --ff-only 2>&1 && git log --oneline -1"
+    if ($LASTEXITCODE -ne 0) {
+        # A failed pull leaves the server on older-but-working code, so this is
+        # not worth blocking the export on -- but it must be loud, since the
+        # whole point is to stop silent drift.
+        Write-Warning "Could not update the server checkout (exit code $LASTEXITCODE):"
+        $pullOutput | ForEach-Object { Write-Warning "  $_" }
+        Write-Warning "Continuing with the code already on the server."
+    }
+    else {
+        Write-Host "  now at: $(@($pullOutput)[-1])"
+    }
+}
 
 # Ask the server what it already has. `|| true` keeps a first-run empty folder
 # from tripping the non-zero exit.
