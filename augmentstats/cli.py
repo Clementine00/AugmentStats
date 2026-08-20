@@ -20,8 +20,11 @@ def cmd_refresh_augments(args: argparse.Namespace) -> None:
 
 
 def cmd_refresh_champions(args: argparse.Namespace) -> None:
-    count = refresh_champions(args.db)
-    print(f"Refreshed {count} champions in {args.db}")
+    result = refresh_champions(args.db)
+    message = f"Refreshed {result['refreshed']} champions in {args.db}"
+    if result["pruned"]:
+        message += f" ({result['pruned']} obsolete entries removed)"
+    print(message)
 
 
 def cmd_ingest(args: argparse.Namespace) -> None:
