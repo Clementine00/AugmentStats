@@ -1,0 +1,4 @@
+augmentstats.db
+data/raw/*.json
+__pycache__/
+*.pyc

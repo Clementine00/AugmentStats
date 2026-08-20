@@ -1,0 +1,10 @@
+# Normalise line endings so Windows checkouts and Linux CI agree.
+# Without this, CRLF in the index can make `ruff format --check` fail in CI
+# while passing locally.
+* text=auto eol=lf
+
+# PowerShell is Windows-only here; keep it CRLF in the working tree.
+*.ps1 text eol=crlf
+
+# Exported game JSON can be UTF-16; never let git touch it.
+*.json -text
