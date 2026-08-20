@@ -3,3 +3,4 @@ data/raw/*.json
 __pycache__/
 *.pyc
 .venv/
+server.local
