@@ -306,22 +306,74 @@ uncomment to restrict results to one patch.
 
 ## Typical workflow
 
-```
-# One-time
-python -m augmentstats init-db
-python -m augmentstats refresh-augments
-python -m augmentstats refresh-champions
+The **server owns the database**. Windows exports games and ships them; the
+server ingests and answers questions. See [Server](#server) for the details.
 
-# Each session (League client open)
+```
+# Each session, on Windows with the League client open
 powershell -File scripts\export-games.ps1 -Count 20
-python -m augmentstats ingest
+powershell -File scripts\sync-to-server.ps1
 
-# After a game patch adds augments
-python -m augmentstats refresh-augments
+# Analyze, on the server
+ssh <server> "cd /srv/augmentstats && sqlite3 augmentstats.db < queries/augment_winrates.sql"
 
-# Analyze
-sqlite3 augmentstats.db < queries/augment_winrates.sql
+# After a game patch adds augments, on the server
+ssh <server> "cd /srv/augmentstats && python3 -m augmentstats refresh-augments"
 ```
+
+Running everything locally still works (`init-db`, `ingest`, then query
+`augmentstats.db` directly) -- it is just no longer the source of truth.
+
+## Server
+
+The database lives on a Linux host at `/srv/augmentstats`, a clone of this
+repository plus two git-ignored artifacts: `data/raw/` and `augmentstats.db`.
+
+Why the split: `export-games.ps1` needs a running Windows League client, so games
+can only originate on Windows. Everything after that runs on the server. **Raw
+JSON is the transport, not the database** -- the server's database is therefore
+always rebuildable from the files it already holds, and there is exactly one
+writer.
+
+```
+Windows                              Server
+-------                              ------
+export-games.ps1
+  -> data/raw/*.json
+  --- sync-to-server.ps1 (scp) --->  data/raw/*.json
+                                     ingest
+                                       -> augmentstats.db   (source of truth)
+```
+
+### One-time setup
+
+```bash
+sudo mkdir -p /srv/augmentstats && sudo chown "$USER:$USER" /srv/augmentstats
+git clone https://github.com/Clementine00/AugmentStats.git /srv/augmentstats
+cd /srv/augmentstats
+sudo apt install sqlite3          # Python's sqlite3 module is built in; this is the CLI
+mkdir -p data/raw                 # git does not store empty directories
+python3 -m augmentstats init-db
+python3 -m augmentstats refresh-augments
+python3 -m augmentstats refresh-champions
+```
+
+Needs Python 3.14 (matching local and CI) and SSH key auth from the Windows box.
+
+### Syncing
+
+```powershell
+powershell -File scripts\sync-to-server.ps1
+```
+
+Asks the server which games it already has, copies only the missing ones, runs
+ingest remotely and prints the result. `scp` is used rather than `rsync` because
+rsync would have to exist on both ends and Windows has none.
+
+The SSH target is resolved in this order: `-Server user@host`, then the
+`AUGMENTSTATS_SERVER` environment variable, then a `server.local` file in the repo
+root. `server.local` is git-ignored so the address stays out of this public
+repository.
 
 ## Notes and caveats
 
